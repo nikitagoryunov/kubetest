@@ -41,7 +41,7 @@ spec:
         - name: kryukov-local
       containers:
         - name: kubetest
-          image: n.kryukov.local/bigkaa/kubetest2:v0.01.$BUILD_NUMBER
+          image: nagoryunov/jenkins:v1.2
           imagePullPolicy: Always
           env:
             - name: BIND_ADDR
