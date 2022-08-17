@@ -7,6 +7,11 @@ metadata:
   name: kaniko
 spec:
   containers:
+  - name: kubectl
+    image: joshendriks/alpine-k8s
+    command:
+    - /bin/cat
+    tty: true
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     imagePullPolicy: IfNotPresent
@@ -28,30 +33,33 @@ spec:
 """
         }
     }
-
-    stages {
+      stages {
         // Удалить если pipeline script from SCM
         stage('GIT') {
             steps {
-                git branch: 'EDIT', url: 'https://github.com/BigKAA/kubetest2'
+                git branch: 'master', url: 'https://github.com/nikitagoryunov/kubetest.git'
             }
         }
-
-        stage('BUILD') {
-            steps {
-                container(name: 'kaniko') {
-                    sh '''
-/kaniko/executor --dockerfile `pwd`/Dockerfile --context `pwd` --destination=n.kryukov.local/bigkaa/kubetest2:v0.01.$BUILD_NUMBER
-                    '''
-                }
-            }
+      stage('BUILD') {
+        steps {
+          container(name: 'kaniko') {
+            sh '''
+              /kaniko/executor --dockerfile `pwd`/Dockerfile --context `pwd` --destination=nagoryunov/jenkins:v1.2
+            '''
+          }
         }
-
+      }
         stage('DEPLOY') {
             steps {
-              kubernetesDeploy configs: 'deployment/00-acc.yaml', kubeConfig: [path: ''], kubeconfigId: 'cube-conf-admin', secretName: '', ssh: [sshCredentialsId: '*', sshServer: ''], textCredentials: [certificateAuthorityData: '', clientCertificateData: '', clientKeyData: '', serverUrl: 'https://']
-              kubernetesDeploy configs: 'deployment/01-deployment.yaml', kubeConfig: [path: ''], kubeconfigId: 'cube-conf-admin', secretName: '', ssh: [sshCredentialsId: '*', sshServer: ''], textCredentials: [certificateAuthorityData: '', clientCertificateData: '', clientKeyData: '', serverUrl: 'https://']
+              container('kubectl'){
+                withCredentials([kubeconfigFile(credentialsId: 'cube-conf-admin', variable: 'KUBECONFIG')]) {
+                  sh '''
+                    kubectl apply -f deployment/00-acc.yaml
+                    kubectl apply -f deployment/01-deployment.yaml
+                  '''
+                }
+              }
             }
         }
-    }
+      }
 }
